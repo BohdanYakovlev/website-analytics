@@ -13,18 +13,21 @@ const (
 	secondDayFile = "Input/second_day.csv"
 )
 
-type user struct {
+var firstDayMap map[string]users
+var secondDayMap map[string]users
+
+type users struct {
 	visitedProducts map[string]int
 }
 
-func readDay(fileToRead string) (map[string]user, error) {
+func readDay(fileToRead string) (map[string]users, error) {
 
 	file, err := os.Open(fileToRead)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]user)
+	result := make(map[string]users)
 
 	reader := csv.NewReader(file)
 
@@ -44,7 +47,7 @@ func readDay(fileToRead string) (map[string]user, error) {
 		userId := record[0]
 		productId := record[1]
 
-		var tempUser user
+		var tempUser users
 		tempUser, ok := result[productId]
 
 		if ok {
@@ -62,6 +65,28 @@ func readDay(fileToRead string) (map[string]user, error) {
 	}
 
 	return result, nil
+}
+
+func printBothDayVisit(firstDayMap map[string]users, secondDayMap map[string]users) {
+
+	resultUsers := make(map[string]int)
+
+	for firstDayMapKey, firstDayMapValue := range firstDayMap {
+		secondDayMapValue, ok := secondDayMap[firstDayMapKey]
+
+		if ok {
+			for firstDayMapUsersKey, _ := range firstDayMapValue.visitedProducts {
+				_, ok := secondDayMapValue.visitedProducts[firstDayMapUsersKey]
+				if ok {
+					resultUsers[firstDayMapUsersKey] = 0
+				}
+			}
+		}
+	}
+
+	for resultUsersKey, _ := range resultUsers {
+		fmt.Println(resultUsersKey)
+	}
 }
 
 func main() {
