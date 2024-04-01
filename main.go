@@ -90,10 +90,17 @@ func printSecondDayNewProductsVisit(firstDayMap map[string]users, secondDayMap m
 
 	resultUsers := make(map[string]int)
 	for secondDayMapProduct, secondDayMapUsers := range secondDayMap {
-		_, ok := firstDayMap[secondDayMapProduct]
+		firstDayMapUsers, ok := firstDayMap[secondDayMapProduct]
 		if !ok {
 			for secondDayMapUser, _ := range secondDayMapUsers.visitedProducts {
 				resultUsers[secondDayMapUser] = 0
+			}
+		} else {
+			for secondDayMapUser, _ := range secondDayMapUsers.visitedProducts {
+				_, ok := firstDayMapUsers.visitedProducts[secondDayMapUser]
+				if !ok {
+					resultUsers[secondDayMapUser] = 0
+				}
 			}
 		}
 	}
