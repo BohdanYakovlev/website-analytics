@@ -13,9 +13,6 @@ const (
 	secondDayFile = "Input/second_day.csv"
 )
 
-var firstDayMap map[string]users
-var secondDayMap map[string]users
-
 type users struct {
 	visitedProducts map[string]int
 }
@@ -41,7 +38,7 @@ func readDay(fileToRead string) (map[string]users, error) {
 			return nil, err
 		}
 		if len(record) != 3 {
-			return nil, errors.New(fmt.Sprintf("In file %s incorrect filds in %n record", fileToRead, addedRecordIndex))
+			return nil, errors.New(fmt.Sprintf("In file %s incorrect filds in %d record", fileToRead, addedRecordIndex))
 		}
 		addedRecordIndex++
 		userId := record[0]
@@ -89,6 +86,34 @@ func printBothDayVisit(firstDayMap map[string]users, secondDayMap map[string]use
 	}
 }
 
-func main() {
+func printSecondDayNewProductsVisit(firstDayMap map[string]users, secondDayMap map[string]users) {
 
+	resultUsers := make(map[string]int)
+	for secondDayMapProduct, secondDayMapUsers := range secondDayMap {
+		_, ok := firstDayMap[secondDayMapProduct]
+		if !ok {
+			for secondDayMapUser, _ := range secondDayMapUsers.visitedProducts {
+				resultUsers[secondDayMapUser] = 0
+			}
+		}
+	}
+	for resultUsersKey, _ := range resultUsers {
+		fmt.Println(resultUsersKey)
+	}
+}
+func main() {
+	firstDayMap, err := readDay(firstDayFile)
+	if err != nil {
+		panic(err)
+	}
+	secondDayMap, err := readDay(secondDayFile)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Users that visited some pages on both days:")
+	printBothDayVisit(firstDayMap, secondDayMap)
+
+	fmt.Println("Users who did not visit the page on the first day but visited it on the second day")
+	printSecondDayNewProductsVisit(firstDayMap, secondDayMap)
 }
