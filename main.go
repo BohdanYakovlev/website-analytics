@@ -27,7 +27,7 @@ func readDay(fileToRead string) (map[string]users, error) {
 	result := make(map[string]users)
 
 	reader := csv.NewReader(file)
-
+	reader.Read()
 	addedRecordIndex := 1
 	for {
 		record, err := reader.Read()
