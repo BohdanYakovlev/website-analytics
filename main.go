@@ -10,100 +10,170 @@ import (
 	"strings"
 )
 
-type users struct {
-	visitedProducts map[string]int
+type dataHandler interface {
+	handleFirstDayRecord(record []string)
+	handleSecondDayRecord(record []string)
+	getResult() map[string]void
+	printResult()
 }
 
-func readDay(fileToRead string) (map[string]users, error) {
+type void struct {
+}
 
-	file, err := os.Open(fileToRead)
-	if err != nil {
-		return nil, err
+type (
+	dayMapType map[string]map[string]void
+)
+
+type bothDayDataHandler struct {
+	firstDayData  dayMapType
+	secondDayData dayMapType
+	ignoreUsersId map[string]void
+}
+
+type filePaths struct {
+	firstFilePath  string
+	secondFilePath string
+}
+
+func (data *bothDayDataHandler) handleFirstDayRecord(record []string) {
+	userId := record[0]
+	productId := record[1]
+
+	_, is := data.ignoreUsersId[userId]
+	//fmt.Println(data.ignoreUsersId)
+	if !is {
+		secondDayProductMap, is := data.secondDayData[userId]
+		//fmt.Println(data.secondDayData)
+		if is {
+			_, is = secondDayProductMap[productId]
+			if is {
+				data.ignoreUsersId[userId] = void{}
+				delete(data.firstDayData, userId)
+				delete(data.secondDayData, userId)
+				return
+			}
+			addRecord(data.firstDayData, record)
+
+		}
+		addRecord(data.firstDayData, record)
+	}
+}
+
+func (data *bothDayDataHandler) handleSecondDayRecord(record []string) {
+	data.firstDayData, data.secondDayData = data.secondDayData, data.firstDayData
+	data.handleFirstDayRecord(record)
+	data.firstDayData, data.secondDayData = data.secondDayData, data.firstDayData
+}
+
+func (data *bothDayDataHandler) getResult() map[string]void {
+	return data.ignoreUsersId
+}
+
+func (data *bothDayDataHandler) printResult() {
+	res := data.getResult()
+
+	fmt.Println("Users that visited some pages on both days:")
+	for key, _ := range res {
+		fmt.Println(key)
+	}
+}
+
+type onlySecondDayDataHandler struct {
+	firstDayData  dayMapType
+	secondDayData dayMapType
+}
+
+func (data *onlySecondDayDataHandler) handleFirstDayRecord(record []string) {
+	addRecord(data.firstDayData, record)
+}
+
+func (data *onlySecondDayDataHandler) handleSecondDayRecord(record []string) {
+	addRecord(data.secondDayData, record)
+}
+
+func (data *onlySecondDayDataHandler) getResult() map[string]void {
+	resultMap := make(map[string]void)
+	for secondDayUserId, secondDayProductMap := range data.secondDayData {
+		firstDayProductMap, is := data.firstDayData[secondDayUserId]
+		if is {
+			for productId, _ := range secondDayProductMap {
+				_, is = firstDayProductMap[productId]
+				if !is {
+					resultMap[secondDayUserId] = void{}
+				}
+			}
+		} else {
+			resultMap[secondDayUserId] = void{}
+		}
 	}
 
-	result := make(map[string]users)
+	return resultMap
+}
 
-	reader := csv.NewReader(file)
-	reader.Read()
-	addedRecordIndex := 1
+func (data *onlySecondDayDataHandler) printResult() {
+	res := data.getResult()
+
+	fmt.Println("Users who did not visit the page on the first day but visited it on the second day:")
+	for key, _ := range res {
+		fmt.Println(key)
+	}
+}
+
+func addRecord(dayMap dayMapType, record []string) {
+	userId := record[0]
+	productId := record[1]
+
+	productMap, is := dayMap[userId]
+	if is {
+		_, is := productMap[productId]
+		if !is {
+			productMap[productId] = void{}
+		}
+		return
+	}
+	tempMap := make(map[string]void)
+	tempMap[productId] = void{}
+	dayMap[userId] = tempMap
+}
+
+func handleResult(files filePaths, handler dataHandler) {
+
+	firstFileReader, firstDataFile := getReader(files.firstFilePath)
+	defer firstDataFile.Close()
+
+	secondFileReader, secondDataFile := getReader(files.secondFilePath)
+	defer secondDataFile.Close()
+
+	_, _ = getRecord(firstFileReader)
+	_, _ = getRecord(secondFileReader)
+
 	for {
-		record, err := reader.Read()
-		if err == io.EOF {
+
+		firstFileRecord, firstFileFlag := getRecord(firstFileReader)
+		if firstFileFlag {
+			handler.handleFirstDayRecord(firstFileRecord)
+		}
+
+		secondFileRecord, secondFileFlag := getRecord(secondFileReader)
+		if secondFileFlag {
+			handler.handleSecondDayRecord(secondFileRecord)
+		}
+
+		if !firstFileFlag && !secondFileFlag {
 			break
 		}
-		if err != nil {
-			return nil, err
-		}
-		if len(record) != 3 {
-			return nil, errors.New(fmt.Sprintf("In file %s incorrect filds in %d record", fileToRead, addedRecordIndex))
-		}
-		addedRecordIndex++
-		userId := record[0]
-		productId := record[1]
-
-		var tempUser users
-		tempUser, ok := result[productId]
-
-		if ok {
-			visitSum, ok := tempUser.visitedProducts[userId]
-			if ok {
-				tempUser.visitedProducts[userId] = visitSum + 1
-			} else {
-				tempUser.visitedProducts[userId] = 1
-			}
-		} else {
-			tempUser.visitedProducts = make(map[string]int)
-			tempUser.visitedProducts[userId] = 1
-			result[productId] = tempUser
-		}
 	}
 
-	return result, nil
+	handler.printResult()
 }
 
-func printBothDayVisit(firstDayMap map[string]users, secondDayMap map[string]users) {
+func printRAMResult(files filePaths) {
 
-	resultUsers := make(map[string]int)
+	bothHandler := bothDayDataHandler{make(dayMapType), make(dayMapType), make(map[string]void)}
+	handleResult(files, &bothHandler)
 
-	for firstDayMapKey, firstDayMapValue := range firstDayMap {
-		secondDayMapValue, ok := secondDayMap[firstDayMapKey]
-
-		if ok {
-			for firstDayMapUsersKey, _ := range firstDayMapValue.visitedProducts {
-				_, ok := secondDayMapValue.visitedProducts[firstDayMapUsersKey]
-				if ok {
-					resultUsers[firstDayMapUsersKey] = 0
-				}
-			}
-		}
-	}
-
-	for resultUsersKey, _ := range resultUsers {
-		fmt.Println(resultUsersKey)
-	}
-}
-
-func printSecondDayNewProductsVisit(firstDayMap map[string]users, secondDayMap map[string]users) {
-
-	resultUsers := make(map[string]int)
-	for secondDayMapProduct, secondDayMapUsers := range secondDayMap {
-		firstDayMapUsers, ok := firstDayMap[secondDayMapProduct]
-		if !ok {
-			for secondDayMapUser, _ := range secondDayMapUsers.visitedProducts {
-				resultUsers[secondDayMapUser] = 0
-			}
-		} else {
-			for secondDayMapUser, _ := range secondDayMapUsers.visitedProducts {
-				_, ok := firstDayMapUsers.visitedProducts[secondDayMapUser]
-				if !ok {
-					resultUsers[secondDayMapUser] = 0
-				}
-			}
-		}
-	}
-	for resultUsersKey, _ := range resultUsers {
-		fmt.Println(resultUsersKey)
-	}
+	onlySecondHandler := onlySecondDayDataHandler{make(dayMapType), make(dayMapType)}
+	handleResult(files, &onlySecondHandler)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -135,6 +205,24 @@ func recreateDirectory(directoryPath string) {
 	createDirectoryIfExist(directoryPath)
 }
 
+func createFile(fileDirectory string) {
+	file, err := os.Create(fileDirectory)
+	if err != nil {
+		panic(err)
+	}
+	file.Close()
+}
+
+func createProductsFile(data []string, directoryPath string) {
+	fileDirectory := fmt.Sprintf("%s/UserID:%s-ProductId:%s.txt", directoryPath, data[0], data[1])
+	createFile(fileDirectory)
+}
+
+func createUserFile(userId string) {
+	filePath := fmt.Sprintf("%s/%s.txt", resultPath, userId)
+	createFile(filePath)
+}
+
 func getReader(filePath string) (*csv.Reader, *os.File) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -143,11 +231,10 @@ func getReader(filePath string) (*csv.Reader, *os.File) {
 	return csv.NewReader(file), file
 }
 
-func getRecord(reader *csv.Reader, flag *bool) []string {
+func getRecord(reader *csv.Reader) ([]string, bool) {
 	record, err := reader.Read()
 	if err == io.EOF {
-		*flag = false
-		return record
+		return record, false
 	}
 	if err != nil {
 		panic(err)
@@ -155,28 +242,10 @@ func getRecord(reader *csv.Reader, flag *bool) []string {
 	if len(record) != 3 {
 		panic(errors.New("incorrect record"))
 	}
-	return record
+	return record, true
 }
 
-func createProductsFile(data []string, directoryPath string) {
-	fileDirectory := fmt.Sprintf("%s/UserID:%s-ProductId:%s.txt", directoryPath, data[0], data[1])
-	file, err := os.Create(fileDirectory)
-	if err != nil {
-		panic(err)
-	}
-	file.Close()
-}
-
-func createUserFile(userId string) {
-	filePath := fmt.Sprintf("%s/%s.txt", resultPath, userId)
-	file, err := os.Create(filePath)
-	if err != nil {
-		panic(err)
-	}
-	file.Close()
-}
-
-func readFiles(firstFilePath string, secondFilePath string) {
+func readFiles(firstFilePath, secondFilePath string) {
 
 	firstFileReader, firstFile := getReader(firstFilePath)
 	defer firstFile.Close()
@@ -184,20 +253,23 @@ func readFiles(firstFilePath string, secondFilePath string) {
 	secondFileReader, secondFile := getReader(secondFilePath)
 	defer secondFile.Close()
 
-	fileFlag := true
-	firstFileRecord := getRecord(firstFileReader, &fileFlag)
-	secondFileRecord := getRecord(secondFileReader, &fileFlag)
+	_, _ = getRecord(firstFileReader)
+	_, _ = getRecord(secondFileReader)
 
-	for fileFlag {
+	for {
 
-		firstFileRecord = getRecord(firstFileReader, &fileFlag)
-		if fileFlag {
+		firstFileRecord, firstFileFlag := getRecord(firstFileReader)
+		if firstFileFlag {
 			createProductsFile(firstFileRecord, firstDayFiles)
 		}
 
-		secondFileRecord = getRecord(secondFileReader, &fileFlag)
-		if fileFlag {
+		secondFileRecord, secondFileFlag := getRecord(secondFileReader)
+		if secondFileFlag {
 			createProductsFile(secondFileRecord, secondDayFiles)
+		}
+
+		if !firstFileFlag && !secondFileFlag {
+			break
 		}
 	}
 }
@@ -266,7 +338,7 @@ func getUserIdFromFile(fileName string) string {
 	return fileName[len("UserId:"):index]
 }
 
-func getDataPaths() (string, string) {
+func getDataPaths() filePaths {
 	var firstDataFile string
 	var secondDataFile string
 
@@ -285,31 +357,13 @@ func getDataPaths() (string, string) {
 		fmt.Println("Can not read second data")
 	}
 
-	return firstDataFile, secondDataFile
+	return filePaths{firstDataFile, secondDataFile}
 }
 
-func main() {
-
-	/*firstDayMap, err := readDay(firstDayFile)
-	if err != nil {
-		panic(err)
-	}
-	secondDayMap, err := readDay(secondDayFile)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("Users that visited some pages on both days:")
-	printBothDayVisit(firstDayMap, secondDayMap)
-
-	fmt.Println("Users who did not visit the page on the first day but visited it on the second day:")
-	printSecondDayNewProductsVisit(firstDayMap, secondDayMap)*/
-
+func printDiskResult(files filePaths) {
 	createDirectories()
 
-	firstDataFile, secondDataFile := getDataPaths()
-
-	readFiles(firstDataFile, secondDataFile)
+	readFiles(files.firstFilePath, files.secondFilePath)
 
 	fmt.Println("Users that visited some pages on both days:")
 	printBothDayVisitUsers()
@@ -318,5 +372,17 @@ func main() {
 	printSecondDayNewProductsVisitUsers()
 
 	deleteDirectory(userDirectory)
+}
+
+func main() {
+
+	files := filePaths{"./Input/first_day.csv", "./Input/second_day.csv"}
+	//firstDataFile, secondDataFile := getDataPaths()
+
+	fmt.Println("RAM method:")
+	printRAMResult(files)
+
+	fmt.Println("\nDisk method")
+	printDiskResult(files)
 
 }
