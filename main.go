@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 )
 
 type dataHandler interface {
@@ -163,17 +164,19 @@ func handleResult(files filePaths, handler dataHandler) {
 			break
 		}
 	}
-
-	handler.printResult()
 }
 
-func printRAMResult(files filePaths) {
+func getRAMResult(files filePaths) (bothDay map[string]void, onlySecondDay map[string]void) {
 
 	bothHandler := bothDayDataHandler{make(dayMapType), make(dayMapType), make(map[string]void)}
 	handleResult(files, &bothHandler)
+	bothDay = bothHandler.getResult()
 
 	onlySecondHandler := onlySecondDayDataHandler{make(dayMapType), make(dayMapType)}
 	handleResult(files, &onlySecondHandler)
+	onlySecondDay = onlySecondHandler.getResult()
+
+	return
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -274,7 +277,7 @@ func readFiles(firstFilePath, secondFilePath string) {
 	}
 }
 
-func printBothDayVisitUsers() {
+func bothDayVisitUsers() {
 
 	recreateDirectory(resultPath)
 
@@ -291,11 +294,9 @@ func printBothDayVisitUsers() {
 			}
 		}
 	}
-
-	printResult("./Users/Result")
 }
 
-func printSecondDayNewProductsVisitUsers() {
+func secondDayNewProductsVisitUsers() {
 
 	recreateDirectory(resultPath)
 
@@ -312,24 +313,26 @@ func printSecondDayNewProductsVisitUsers() {
 			}
 		}
 	}
-
-	printResult("./Users/Result")
 }
 
-func printResult(directoryPath string) {
+func getResult(directoryPath string) map[string]void {
 	userFiles, err := ioutil.ReadDir(directoryPath)
 	if err != nil {
 		panic(err)
 	}
 
+	res := make(map[string]void)
+
 	for _, file := range userFiles {
 		if !file.IsDir() {
 			_, err = os.Stat(directoryPath + "/" + file.Name())
 			if err == nil {
-				fmt.Println(strings.Replace(file.Name(), ".txt", "", -1))
+				temp := strings.Replace(file.Name(), ".txt", "", -1)
+				res[temp] = void{}
 			}
 		}
 	}
+	return res
 }
 
 func getUserIdFromFile(fileName string) string {
@@ -360,18 +363,59 @@ func getDataPaths() filePaths {
 	return filePaths{firstDataFile, secondDataFile}
 }
 
-func printDiskResult(files filePaths) {
+func getDiskResult(files filePaths) (bothDay map[string]void, onlySecondDay map[string]void) {
 	createDirectories()
 
 	readFiles(files.firstFilePath, files.secondFilePath)
 
-	fmt.Println("Users that visited some pages on both days:")
-	printBothDayVisitUsers()
+	bothDayVisitUsers()
+	bothDay = getResult(resultPath)
 
-	fmt.Println("Users who did not visit the page on the first day but visited it on the second day:")
-	printSecondDayNewProductsVisitUsers()
+	secondDayNewProductsVisitUsers()
+	onlySecondDay = getResult(resultPath)
 
 	deleteDirectory(userDirectory)
+
+	return
+}
+
+func printResult(m1 map[string]void, m2 map[string]void) {
+	for key, _ := range m1 {
+		_, is := m2[key]
+		if is {
+			fmt.Println(key + ", " + key)
+		} else {
+			fmt.Println(key + ", ")
+		}
+	}
+
+	for key, _ := range m2 {
+		_, is := m1[key]
+		if !is {
+			fmt.Println(" , " + key)
+		}
+	}
+}
+
+func printResults(files filePaths) {
+
+	startTime := time.Now()
+	bothDayRAM, onlySecondDayRAM := getRAMResult(files)
+	endTime := time.Now()
+	fmt.Println("RAM method running time: " + endTime.Sub(startTime).String())
+
+	startTime = time.Now()
+	bothDayDisk, onlySecondDayDisk := getDiskResult(files)
+	endTime = time.Now()
+	fmt.Println("DISK method running time: " + endTime.Sub(startTime).String())
+
+	fmt.Println("Users that visited some pages on both days:")
+	fmt.Println("RAM, DISK")
+	printResult(bothDayRAM, bothDayDisk)
+
+	fmt.Println("Users who did not visit the page on the first day but visited it on the second day:")
+	fmt.Println("RAM, DISK")
+	printResult(onlySecondDayRAM, onlySecondDayDisk)
 }
 
 func main() {
@@ -379,10 +423,6 @@ func main() {
 	files := filePaths{"./Input/first_day.csv", "./Input/second_day.csv"}
 	//firstDataFile, secondDataFile := getDataPaths()
 
-	fmt.Println("RAM method:")
-	printRAMResult(files)
-
-	fmt.Println("\nDisk method")
-	printDiskResult(files)
+	printResults(files)
 
 }
