@@ -8,23 +8,23 @@ To run this console app, follow these steps:
 
 1. Clone this repository to your local machine:
 
-```bash
+```
 git clone <repository_url>
-```bash
+```
 
 2. Navigate to the directory containing the Go code:
 
-```bash
+```
 cd website-analytics-console-app
-```bash
+```
 
 3. Ensure you have Go installed on your system. If not, you can download it from [here](https://golang.org/dl/).
 
 4. Execute the Go code by running the following command:
 
-```bash
+```
 go run main.go
-```bash
+```
 
 5. Follow the on-screen instructions to provide the paths to your CSV files containing website analytics data for the first and second days.
 
