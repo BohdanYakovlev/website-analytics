@@ -53,7 +53,7 @@ go run main.go
    - Return the results.
 #### Efficiency:
    - Creating files does not overload RAM.
-#### Running time: 60-80 ms
+#### Running time: 60-90 ms
 
 ## Specifications of the executing machine:
    - CPU: Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz
