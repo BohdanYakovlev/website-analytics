@@ -420,8 +420,8 @@ func printResults(files filePaths) {
 
 func main() {
 
-	files := filePaths{"./Input/first_day.csv", "./Input/second_day.csv"}
-	//firstDataFile, secondDataFile := getDataPaths()
+	//files := filePaths{"./Input/first_day.csv", "./Input/second_day.csv"}
+	files := getDataPaths()
 
 	printResults(files)
 
