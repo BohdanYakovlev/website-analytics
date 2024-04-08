@@ -1,4 +1,4 @@
-# Website Analytics Console App
+# [Website Analytics](https://docs.google.com/document/d/1fpnCkMOV-CqydPIo0EnSrQ6pln4pniSxoGa_9uAgLQ8/edit#heading=h.jfgry0741f91) Console App
 
 This console application is designed to analyze website analytics data provided in CSV files representing user visits to product pages on different days. The task involves identifying users who visited pages on both days and, specifically, those who visited a page on the second day that they hadn't visited on the first day.
 
@@ -15,7 +15,7 @@ git clone <repository_url>
 2. Navigate to the directory containing the Go code:
 
 ```
-cd website-analytics-console-app
+cd website-analytics
 ```
 
 3. Ensure you have Go installed on your system. If not, you can download it from [here](https://golang.org/dl/).
