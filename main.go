@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -122,9 +124,36 @@ func printResults(files filePaths) {
 	printResult(onlySecondDayRAM, onlySecondDayDisk)
 }
 
+func refresh(filePath string) {
+	file, err := os.Create(filePath)
+	if err != nil {
+		panic(err)
+	}
+	writer := csv.NewWriter(file)
+	n := rand.Intn(10000)
+	for i := 0; i < n; i++ {
+		writer.Write([]string{strconv.Itoa(rand.Intn(1000)), strconv.Itoa(rand.Intn(1000)), "1"})
+		writer.Flush()
+	}
+	file.Close()
+}
+
+func megaTest() {
+	files := filePaths{"./Input/first_day.csv", "./Input/second_day.csv"}
+
+	for {
+		refresh(files.firstFilePath)
+		refresh(files.secondFilePath)
+		printResults(files)
+		os.Remove(files.firstFilePath)
+		os.Remove(files.secondFilePath)
+	}
+}
+
 func main() {
 
-	//files := filePaths{"./Input/first_day.csv", "./Input/second_day.csv"}
+	//megaTest()
+
 	files := getDataPaths()
 
 	printResults(files)
