@@ -1,4 +1,4 @@
-# [Website Analytics](https://docs.google.com/document/d/1fpnCkMOV-CqydPIo0EnSrQ6pln4pniSxoGa_9uAgLQ8/edit#heading=h.jfgry0741f91) Console App
+# [Website Analytics](https://docs.google.com/document/d/1fpnCkMOV-CqydPIo0EnSrQ6pln4pniSxoGa_9uAgLQ8/edit?usp=sharing) Console App
 
 This console application is designed to analyze website analytics data provided in CSV files representing user visits to product pages on different days. The task involves identifying users who visited pages on both days and, specifically, those who visited a page on the second day that they hadn't visited on the first day.
 
@@ -30,6 +30,11 @@ go run main.go
 
 6. Once the program finishes executing, it will display the users who visited some pages on both days and users who visited a page on the second day that they hadn't visited on the first day.
 
+## Input CSV File Format
+The input CSV file should have the following structure:
+```
+user_id,product_id,timestamp
+```
 ## Algorithms
 
 ### 1. RAM Method O(n):
