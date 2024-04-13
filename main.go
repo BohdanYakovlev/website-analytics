@@ -36,10 +36,7 @@ func getRecord(reader *csv.Reader) ([]string, bool) {
 func readFiles(firstFilePath, secondFilePath string) {
 
 	firstFileReader, firstFile := getReader(firstFilePath)
-	defer firstFile.Close()
-
 	secondFileReader, secondFile := getReader(secondFilePath)
-	defer secondFile.Close()
 
 	// Read record headers in files
 	_, _ = getRecord(firstFileReader)
@@ -61,6 +58,10 @@ func readFiles(firstFilePath, secondFilePath string) {
 			break
 		}
 	}
+
+	firstFile.Close()
+	secondFile.Close()
+
 }
 
 func getDataPaths() filePaths {
